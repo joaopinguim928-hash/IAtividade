@@ -7,7 +7,8 @@ import {
   Network,
   Sparkles,
   X,
-  ChevronRight
+  ChevronRight,
+  ListPlus
 } from 'lucide-react';
 
 export default function Sidebar({ isOpen, onClose, activeTab, setActiveTab }) {
@@ -19,6 +20,14 @@ export default function Sidebar({ isOpen, onClose, activeTab, setActiveTab }) {
       badge: 'Geral',
       color: 'text-indigo-600 dark:text-indigo-400',
       bgColor: 'bg-indigo-50 dark:bg-indigo-950/50'
+    },
+    {
+      id: 'creator',
+      label: 'Criar Atividade',
+      icon: ListPlus,
+      badge: 'Novo',
+      color: 'text-pink-600 dark:text-pink-400',
+      bgColor: 'bg-pink-50 dark:bg-pink-950/50'
     },
     {
       id: 'quizzes',
@@ -153,10 +162,10 @@ export default function Sidebar({ isOpen, onClose, activeTab, setActiveTab }) {
               Respostas e correções detalhadas em segundos com Inteligência Artificial.
             </p>
             <button
-              onClick={() => setActiveTab('essays')}
-              className="w-full py-1.5 px-3 bg-white text-indigo-950 font-semibold text-xs rounded-lg hover:bg-indigo-50 transition-colors shadow-xs"
+              onClick={() => setActiveTab('creator')}
+              className="w-full py-1.5 px-3 bg-white text-indigo-950 font-semibold text-xs rounded-lg hover:bg-indigo-50 transition-colors shadow-xs cursor-pointer"
             >
-              Testar Redação com IA
+              Criar Nova Atividade
             </button>
           </div>
         </div>
