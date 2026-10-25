@@ -6,19 +6,27 @@ import {
   Info,
   Sparkles,
   UserCheck,
+  Wand2,
+  Loader2,
   X
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { generateAIActivity } from '../utils/aiGenerator';
 
 export default function MindMapModule() {
-  const { allMindMaps, deleteCustomMindMap } = useAuth();
+  const { allMindMaps, addCustomMindMap, deleteCustomMindMap, apiKey } = useAuth();
 
   const [selectedMap, setSelectedMap] = useState(allMindMaps[0]);
   const [selectedNode, setSelectedNode] = useState(allMindMaps[0]?.nodes[0]);
   const [isAddNodeOpen, setIsAddNodeOpen] = useState(false);
   const [newNodeTitle, setNewNodeTitle] = useState('');
   const [newNodeDesc, setNewNodeDesc] = useState('');
-  const [newNodeColor, setNewNodeColor] = useState('bg-indigo-100 text-indigo-900 border border-indigo-300');
+  const [newNodeColor] = useState('bg-indigo-100 text-indigo-900 border border-indigo-300');
+
+  // Quick AI Modal
+  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+  const [aiTopic, setAiTopic] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
 
   useEffect(() => {
     if (allMindMaps.length > 0 && (!selectedMap || !allMindMaps.find(m => m.id === selectedMap.id))) {
@@ -70,6 +78,32 @@ export default function MindMapModule() {
     setSelectedNode(updatedNodes[0]);
   };
 
+  const handleQuickAIGenerate = async (e) => {
+    e.preventDefault();
+    if (!aiTopic) return;
+
+    setIsGenerating(true);
+    try {
+      const generated = await generateAIActivity({
+        type: 'mindmap',
+        topic: aiTopic,
+        apiKey: apiKey
+      });
+
+      if (generated) {
+        const newMap = addCustomMindMap(generated);
+        setSelectedMap(newMap);
+        setSelectedNode(newMap.nodes[0]);
+        setIsAiModalOpen(false);
+        setAiTopic('');
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   if (!selectedMap) return null;
 
   return (
@@ -83,42 +117,103 @@ export default function MindMapModule() {
             <span>Mapas Mentais Interativos</span>
           </h1>
           <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Navegue por mapas conceituais hierárquicos e adicione novas ramificações de estudos.
+            Navegue por mapas conceituais hierárquicos ou crie um mapa mental completo sobre qualquer tema com IA.
           </p>
         </div>
 
-        {/* Map Selector */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1">
-          {allMindMaps.map((m) => (
-            <div key={m.id} className="flex items-center gap-1">
-              <button
-                onClick={() => {
-                  setSelectedMap(m);
-                  setSelectedNode(m.nodes[0]);
-                }}
-                className={`px-3.5 py-2 rounded-2xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-                  selectedMap?.id === m.id
-                    ? 'bg-cyan-600 text-white shadow-md shadow-cyan-500/20'
-                    : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-cyan-400'
-                }`}
-              >
-                {m.isCustom && <UserCheck className="w-3.5 h-3.5 text-indigo-300" />}
-                <span>{m.subject}: {m.title}</span>
-              </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setIsAiModalOpen(true)}
+            className="px-4 py-2 bg-gradient-to-r from-cyan-600 via-blue-600 to-indigo-600 hover:opacity-95 text-white text-xs font-bold rounded-2xl shadow-md flex items-center gap-1.5 cursor-pointer transition-all"
+          >
+            <Wand2 className="w-4 h-4 text-amber-300" />
+            <span>Gerar Mapa Mental com IA</span>
+          </button>
 
-              {m.isCustom && (
+          {/* Map Selector */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 max-w-md">
+            {allMindMaps.map((m) => (
+              <div key={m.id} className="flex items-center gap-1 shrink-0">
                 <button
-                  onClick={() => deleteCustomMindMap(m.id)}
-                  className="p-1.5 text-rose-500 hover:bg-rose-100 dark:hover:bg-rose-950/40 rounded-xl cursor-pointer"
-                  title="Excluir Mapa Mental"
+                  onClick={() => {
+                    setSelectedMap(m);
+                    setSelectedNode(m.nodes[0]);
+                  }}
+                  className={`px-3.5 py-2 rounded-2xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+                    selectedMap?.id === m.id
+                      ? 'bg-cyan-600 text-white shadow-md shadow-cyan-500/20'
+                      : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-cyan-400'
+                  }`}
                 >
-                  <Trash2 className="w-3.5 h-3.5" />
+                  {m.isCustom && <UserCheck className="w-3.5 h-3.5 text-indigo-300" />}
+                  <span>{m.subject}: {m.title}</span>
                 </button>
-              )}
-            </div>
-          ))}
+
+                {m.isCustom && (
+                  <button
+                    onClick={() => deleteCustomMindMap(m.id)}
+                    className="p-1.5 text-rose-500 hover:bg-rose-100 dark:hover:bg-rose-950/40 rounded-xl cursor-pointer"
+                    title="Excluir Mapa Mental"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
+
+      {/* Quick AI Modal */}
+      {isAiModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl max-w-lg w-full p-6 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <Wand2 className="w-5 h-5 text-cyan-600" />
+                <span>Gerar Mapa Mental com IA</span>
+              </h3>
+              <button onClick={() => setIsAiModalOpen(false)} className="p-1 text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleQuickAIGenerate} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Qual o tema do Mapa Mental? *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ex: Tabela Periódica, Sistema Circulatório, Revolução Industrial..."
+                  value={aiTopic}
+                  onChange={(e) => setAiTopic(e.target.value)}
+                  className="w-full px-4 py-2.5 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-cyan-500 text-slate-800 dark:text-slate-100 outline-hidden"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAiModalOpen(false)}
+                  className="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-700 cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={!aiTopic || isGenerating}
+                  className="px-6 py-2 bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-xs rounded-xl shadow-md flex items-center gap-2 cursor-pointer"
+                >
+                  {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                  <span>{isGenerating ? 'Mapeando com IA...' : 'Gerar Mapa Mental'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 

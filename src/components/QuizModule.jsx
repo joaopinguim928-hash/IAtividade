@@ -15,13 +15,17 @@ import {
   ChevronRight,
   Lightbulb,
   Trash2,
-  UserCheck
+  UserCheck,
+  Wand2,
+  Loader2,
+  X
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useAuth } from '../context/AuthContext';
+import { generateAIActivity } from '../utils/aiGenerator';
 
 export default function QuizModule() {
-  const { recordQuizResult, allQuizzes, deleteCustomQuiz } = useAuth();
+  const { recordQuizResult, allQuizzes, addCustomQuiz, deleteCustomQuiz, apiKey } = useAuth();
 
   const [selectedCategory, setSelectedCategory] = useState('Todos');
   const [activeQuiz, setActiveQuiz] = useState(null);
@@ -30,6 +34,11 @@ export default function QuizModule() {
   const [showExplanation, setShowExplanation] = useState(false);
   const [quizCompleted, setQuizCompleted] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
+
+  // Quick AI Modal State
+  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+  const [aiTopic, setAiTopic] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const getSubjectIcon = (iconName) => {
     switch (iconName) {
@@ -41,7 +50,6 @@ export default function QuizModule() {
     }
   };
 
-  // Timer effect
   useEffect(() => {
     if (!activeQuiz || quizCompleted || timeLeft <= 0) return;
 
@@ -109,6 +117,31 @@ export default function QuizModule() {
     }
   };
 
+  const handleQuickAIGenerate = async (e) => {
+    e.preventDefault();
+    if (!aiTopic) return;
+
+    setIsGenerating(true);
+    try {
+      const generated = await generateAIActivity({
+        type: 'quiz',
+        topic: aiTopic,
+        apiKey: apiKey
+      });
+
+      if (generated) {
+        const newQuiz = addCustomQuiz(generated);
+        setIsAiModalOpen(false);
+        setAiTopic('');
+        startQuiz(newQuiz);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   const formatTime = (seconds) => {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
@@ -121,7 +154,6 @@ export default function QuizModule() {
     ? allQuizzes
     : allQuizzes.filter(q => q.subject === selectedCategory);
 
-  // 1. QUIZ ACTIVE VIEW
   if (activeQuiz && !quizCompleted) {
     const currentQuestion = activeQuiz.questions[currentQuestionIdx];
     const isAnswered = selectedAnswers[currentQuestion.id] !== undefined;
@@ -130,7 +162,6 @@ export default function QuizModule() {
 
     return (
       <div className="max-w-3xl mx-auto space-y-6 pb-12">
-        {/* Header & Progress */}
         <div className="p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-xs">
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -148,7 +179,6 @@ export default function QuizModule() {
             </div>
           </div>
 
-          {/* Progress Bar */}
           <div className="space-y-1">
             <div className="flex justify-between text-xs font-semibold text-slate-500">
               <span>Questão {currentQuestionIdx + 1} de {activeQuiz.questions.length}</span>
@@ -163,13 +193,11 @@ export default function QuizModule() {
           </div>
         </div>
 
-        {/* Question Card */}
         <div className="p-6 md:p-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm space-y-6">
           <h3 className="text-lg md:text-xl font-bold text-slate-900 dark:text-slate-100 leading-snug">
             {currentQuestion.prompt}
           </h3>
 
-          {/* Options */}
           <div className="space-y-3">
             {currentQuestion.options.map((option, idx) => {
               let optionStyle = "border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 text-slate-800 dark:text-slate-200 hover:border-indigo-400";
@@ -211,7 +239,6 @@ export default function QuizModule() {
             })}
           </div>
 
-          {/* Explanation Banner */}
           {showExplanation && (
             <div className={`p-5 rounded-2xl border ${
               isCorrect
@@ -228,7 +255,6 @@ export default function QuizModule() {
             </div>
           )}
 
-          {/* Action Buttons */}
           <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
             <button
               onClick={() => setActiveQuiz(null)}
@@ -264,7 +290,6 @@ export default function QuizModule() {
     );
   }
 
-  // 2. QUIZ RESULT VIEW
   if (activeQuiz && quizCompleted) {
     let correctCount = 0;
     activeQuiz.questions.forEach((q) => {
@@ -296,7 +321,6 @@ export default function QuizModule() {
             </p>
           </div>
 
-          {/* Score Box */}
           <div className="p-6 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 grid grid-cols-2 gap-4">
             <div>
               <p className="text-xs text-slate-500">Acertos</p>
@@ -312,7 +336,6 @@ export default function QuizModule() {
             </div>
           </div>
 
-          {/* Buttons */}
           <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
             <button
               onClick={() => startQuiz(activeQuiz)}
@@ -334,7 +357,6 @@ export default function QuizModule() {
     );
   }
 
-  // 3. QUIZ LIST VIEW
   return (
     <div className="space-y-6 pb-12">
 
@@ -346,27 +368,87 @@ export default function QuizModule() {
             <span>Quizzes de Múltipla Escolha</span>
           </h1>
           <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Escolha uma disciplina para praticar com retorno imediato e explicações explicativas.
+            Escolha uma disciplina ou gere um quiz de qualquer assunto instantaneamente com Inteligência Artificial.
           </p>
         </div>
 
-        {/* Filter Tabs */}
-        <div className="flex items-center gap-1.5 p-1.5 rounded-2xl bg-slate-200/60 dark:bg-slate-800 overflow-x-auto">
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
-                selectedCategory === cat
-                  ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setIsAiModalOpen(true)}
+            className="px-4 py-2 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:opacity-95 text-white text-xs font-bold rounded-2xl shadow-md flex items-center gap-1.5 cursor-pointer transition-all"
+          >
+            <Wand2 className="w-4 h-4 text-amber-300" />
+            <span>Gerar Quiz sobre qualquer Tema com IA</span>
+          </button>
+
+          <div className="flex items-center gap-1.5 p-1.5 rounded-2xl bg-slate-200/60 dark:bg-slate-800 overflow-x-auto">
+            {categories.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setSelectedCategory(cat)}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                  selectedCategory === cat
+                    ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
+
+      {/* Quick AI Generation Modal */}
+      {isAiModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl max-w-lg w-full p-6 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <Wand2 className="w-5 h-5 text-indigo-600" />
+                <span>Gerar Quiz com IA Instantaneamente</span>
+              </h3>
+              <button onClick={() => setIsAiModalOpen(false)} className="p-1 text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleQuickAIGenerate} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Qual o tema do Quiz? *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ex: Guerra Fria, Fotossíntese, Leis de Newton, Iluminismo..."
+                  value={aiTopic}
+                  onChange={(e) => setAiTopic(e.target.value)}
+                  className="w-full px-4 py-2.5 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 text-slate-800 dark:text-slate-100 outline-hidden"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAiModalOpen(false)}
+                  className="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-700 cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={!aiTopic || isGenerating}
+                  className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-md flex items-center gap-2 cursor-pointer"
+                >
+                  {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                  <span>{isGenerating ? 'Gerando com IA...' : 'Gerar e Iniciar Quiz'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Quiz Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -387,7 +469,7 @@ export default function QuizModule() {
                   {quiz.isCustom && (
                     <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 flex items-center gap-1">
                       <UserCheck className="w-3 h-3" />
-                      <span>Criado por Você</span>
+                      <span>Gerado / Criado</span>
                     </span>
                   )}
                   <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${
