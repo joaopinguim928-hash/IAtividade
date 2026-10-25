@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { MOCK_USER_STATS } from '../data/mockData';
+import { MOCK_USER_STATS, MOCK_QUIZZES, MOCK_ESSAY_PROMPTS, MOCK_MIND_MAPS } from '../data/mockData';
 
 const AuthContext = createContext();
 
@@ -11,8 +11,8 @@ export const AuthProvider = ({ children }) => {
       name: 'Maria Eduarda',
       email: 'maria@iatividade.com',
       avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
-      role: 'Estudante',
-      bio: 'Focada nos exames e no domínio da língua e ciências.'
+      role: 'Professor / Criador',
+      bio: 'Criando e aplicando atividades pedagógicas com apoio de IA.'
     };
   });
 
@@ -27,6 +27,26 @@ export const AuthProvider = ({ children }) => {
   });
 
   const [authModalOpen, setAuthModalOpen] = useState(false);
+
+  // Custom Created Activities in LocalStorage
+  const [customQuizzes, setCustomQuizzes] = useState(() => {
+    const saved = localStorage.getItem('iatividade_custom_quizzes');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const [customEssays, setCustomEssays] = useState(() => {
+    const saved = localStorage.getItem('iatividade_custom_essays');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const [customMindMaps, setCustomMindMaps] = useState(() => {
+    const saved = localStorage.getItem('iatividade_custom_mindmaps');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const [apiKey, setApiKey] = useState(() => {
+    return localStorage.getItem('iatividade_api_key') || '';
+  });
 
   useEffect(() => {
     localStorage.setItem('iatividade_user', JSON.stringify(user));
@@ -45,9 +65,23 @@ export const AuthProvider = ({ children }) => {
     }
   }, [darkMode]);
 
-  const toggleDarkMode = () => {
-    setDarkMode(prev => !prev);
-  };
+  useEffect(() => {
+    localStorage.setItem('iatividade_custom_quizzes', JSON.stringify(customQuizzes));
+  }, [customQuizzes]);
+
+  useEffect(() => {
+    localStorage.setItem('iatividade_custom_essays', JSON.stringify(customEssays));
+  }, [customEssays]);
+
+  useEffect(() => {
+    localStorage.setItem('iatividade_custom_mindmaps', JSON.stringify(customMindMaps));
+  }, [customMindMaps]);
+
+  useEffect(() => {
+    localStorage.setItem('iatividade_api_key', apiKey);
+  }, [apiKey]);
+
+  const toggleDarkMode = () => setDarkMode(prev => !prev);
 
   const login = (email, password) => {
     setUser({
@@ -55,14 +89,58 @@ export const AuthProvider = ({ children }) => {
       name: email.split('@')[0] || 'Usuário IAtividade',
       email: email,
       avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
-      role: 'Estudante VIP',
-      bio: 'Pronto para dominar os conteúdos com apoio de Inteligência Artificial.'
+      role: 'Professor / Criador',
+      bio: 'Pronto para criar e aplicar atividades com apoio de Inteligência Artificial.'
     });
     setAuthModalOpen(false);
   };
 
-  const logout = () => {
-    setUser(null);
+  const logout = () => setUser(null);
+
+  // Activity Creator Handlers
+  const addCustomQuiz = (quizData) => {
+    const newQuiz = {
+      id: 'cq-' + Date.now(),
+      isCustom: true,
+      createdAt: new Date().toLocaleDateString('pt-BR'),
+      ...quizData
+    };
+    setCustomQuizzes(prev => [newQuiz, ...prev]);
+    return newQuiz;
+  };
+
+  const deleteCustomQuiz = (id) => {
+    setCustomQuizzes(prev => prev.filter(q => q.id !== id));
+  };
+
+  const addCustomEssay = (essayData) => {
+    const newEssay = {
+      id: 'ce-' + Date.now(),
+      isCustom: true,
+      createdAt: new Date().toLocaleDateString('pt-BR'),
+      ...essayData
+    };
+    setCustomEssays(prev => [newEssay, ...prev]);
+    return newEssay;
+  };
+
+  const deleteCustomEssay = (id) => {
+    setCustomEssays(prev => prev.filter(e => e.id !== id));
+  };
+
+  const addCustomMindMap = (mapData) => {
+    const newMap = {
+      id: 'cmm-' + Date.now(),
+      isCustom: true,
+      createdAt: new Date().toLocaleDateString('pt-BR'),
+      ...mapData
+    };
+    setCustomMindMaps(prev => [newMap, ...prev]);
+    return newMap;
+  };
+
+  const deleteCustomMindMap = (id) => {
+    setCustomMindMaps(prev => prev.filter(m => m.id !== id));
   };
 
   const recordQuizResult = (subject, correctCount, totalQuestions) => {
@@ -124,6 +202,11 @@ export const AuthProvider = ({ children }) => {
     });
   };
 
+  // Combine default mock data with custom user created activities
+  const allQuizzes = [...customQuizzes, ...MOCK_QUIZZES];
+  const allEssays = [...customEssays, ...MOCK_ESSAY_PROMPTS];
+  const allMindMaps = [...customMindMaps, ...MOCK_MIND_MAPS];
+
   return (
     <AuthContext.Provider
       value={{
@@ -136,6 +219,20 @@ export const AuthProvider = ({ children }) => {
         logout,
         authModalOpen,
         setAuthModalOpen,
+        customQuizzes,
+        addCustomQuiz,
+        deleteCustomQuiz,
+        customEssays,
+        addCustomEssay,
+        deleteCustomEssay,
+        customMindMaps,
+        addCustomMindMap,
+        deleteCustomMindMap,
+        allQuizzes,
+        allEssays,
+        allMindMaps,
+        apiKey,
+        setApiKey,
         recordQuizResult,
         recordEssayResult
       }}

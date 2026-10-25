@@ -11,15 +11,16 @@ import {
   RotateCcw,
   ListChecks,
   MessageSquare,
-  ChevronRight
+  ChevronRight,
+  Trash2,
+  UserCheck
 } from 'lucide-react';
-import { MOCK_ESSAY_PROMPTS } from '../data/mockData';
 import { useAuth } from '../context/AuthContext';
 
 export default function AIEssayModule() {
-  const { recordEssayResult } = useAuth();
+  const { recordEssayResult, allEssays, deleteCustomEssay } = useAuth();
 
-  const [selectedPrompt, setSelectedPrompt] = useState(MOCK_ESSAY_PROMPTS[0]);
+  const [selectedPrompt, setSelectedPrompt] = useState(allEssays[0]);
   const [essayText, setEssayText] = useState('');
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [evaluation, setEvaluation] = useState(null);
@@ -33,7 +34,6 @@ export default function AIEssayModule() {
     setEvaluation(null);
 
     setTimeout(() => {
-      // Simulate AI analysis based on text length, structure, and vocabulary
       const baseGrade = 750;
       const lengthBonus = Math.min(150, Math.round(wordCount * 1.5));
       const randomVar = Math.floor(Math.random() * 80);
@@ -107,128 +107,157 @@ export default function AIEssayModule() {
           </h2>
 
           <div className="space-y-3">
-            {MOCK_ESSAY_PROMPTS.map((prompt) => (
-              <button
+            {allEssays.map((prompt) => (
+              <div
                 key={prompt.id}
+                className={`p-4 rounded-2xl border transition-all cursor-pointer ${
+                  selectedPrompt?.id === prompt.id
+                    ? 'border-purple-600 bg-purple-50 dark:bg-purple-950/50 shadow-xs'
+                    : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-purple-300'
+                }`}
                 onClick={() => {
                   setSelectedPrompt(prompt);
                   setEvaluation(null);
                 }}
-                className={`w-full text-left p-4 rounded-2xl border transition-all cursor-pointer ${
-                  selectedPrompt.id === prompt.id
-                    ? 'border-purple-600 bg-purple-50 dark:bg-purple-950/50 shadow-xs'
-                    : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-purple-300'
-                }`}
               >
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/60 text-purple-700 dark:text-purple-300">
-                    {prompt.subject}
-                  </span>
-                  <span className="text-xs text-slate-400">Min. {prompt.minWords} palavras</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/60 text-purple-700 dark:text-purple-300">
+                      {prompt.subject}
+                    </span>
+                    {prompt.isCustom && (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 flex items-center gap-1">
+                        <UserCheck className="w-3 h-3" />
+                        <span>Criado</span>
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-slate-400">Min. {prompt.minWords} palavras</span>
+                    {prompt.isCustom && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteCustomEssay(prompt.id);
+                        }}
+                        className="p-1 text-rose-500 hover:bg-rose-100 dark:hover:bg-rose-950/40 rounded-lg cursor-pointer"
+                        title="Excluir proposta"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
                 </div>
                 <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mt-1">
                   {prompt.title}
                 </h3>
-              </button>
+              </div>
             ))}
           </div>
 
           {/* Context Card */}
-          <div className="p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-3">
-            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-              <BookOpen className="w-4 h-4 text-indigo-500" />
-              <span>Contexto Motivador</span>
-            </h3>
-            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed italic">
-              "{selectedPrompt.sampleContext}"
-            </p>
+          {selectedPrompt && (
+            <div className="p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-3">
+              <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                <BookOpen className="w-4 h-4 text-indigo-500" />
+                <span>Contexto Motivador</span>
+              </h3>
+              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed italic">
+                "{selectedPrompt.sampleContext}"
+              </p>
 
-            <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
-              <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1 mb-1.5">
-                <ListChecks className="w-3.5 h-3.5 text-purple-600" />
-                <span>Roteiro Sugerido:</span>
-              </span>
-              <ul className="text-[11px] text-slate-500 space-y-1 pl-4 list-disc">
-                {selectedPrompt.suggestedStructure.map((item, idx) => (
-                  <li key={idx}>{item}</li>
-                ))}
-              </ul>
+              {selectedPrompt.suggestedStructure && (
+                <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+                  <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1 mb-1.5">
+                    <ListChecks className="w-3.5 h-3.5 text-purple-600" />
+                    <span>Roteiro Sugerido:</span>
+                  </span>
+                  <ul className="text-[11px] text-slate-500 space-y-1 pl-4 list-disc">
+                    {selectedPrompt.suggestedStructure.map((item, idx) => (
+                      <li key={idx}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
-          </div>
+          )}
         </div>
 
         {/* Right Column: Text Editor or AI Evaluation */}
         <div className="lg:col-span-2 space-y-6">
 
           {/* Editor Container */}
-          <div className="p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-xs space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
-              <div>
-                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
-                  {selectedPrompt.title}
-                </h3>
-                <p className="text-xs text-slate-500">Escreva seu texto dissertativo abaixo</p>
+          {selectedPrompt && (
+            <div className="p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-xs space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
+                    {selectedPrompt.title}
+                  </h3>
+                  <p className="text-xs text-slate-500">Escreva seu texto dissertativo abaixo</p>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${
+                    wordCount >= selectedPrompt.minWords
+                      ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400'
+                      : 'bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400'
+                  }`}>
+                    {wordCount} / {selectedPrompt.minWords} palavras
+                  </span>
+
+                  {essayText && (
+                    <button
+                      onClick={handleReset}
+                      className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                      title="Limpar texto"
+                    >
+                      <RotateCcw className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
               </div>
 
-              <div className="flex items-center gap-3">
-                <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${
-                  wordCount >= selectedPrompt.minWords
-                    ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400'
-                    : 'bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400'
-                }`}>
-                  {wordCount} / {selectedPrompt.minWords} palavras
-                </span>
+              {/* Textarea */}
+              <textarea
+                rows={12}
+                value={essayText}
+                onChange={(e) => setEssayText(e.target.value)}
+                placeholder="Digite aqui o seu texto dissertativo completo..."
+                className="w-full p-4 text-sm bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded-2xl focus:ring-2 focus:ring-purple-500 text-slate-800 dark:text-slate-100 placeholder-slate-400 leading-relaxed outline-hidden resize-y"
+              />
 
-                {essayText && (
-                  <button
-                    onClick={handleReset}
-                    className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
-                    title="Limpar texto"
-                  >
-                    <RotateCcw className="w-4 h-4" />
-                  </button>
-                )}
+              {/* Action Row */}
+              <div className="flex items-center justify-between pt-2">
+                <p className="text-xs text-slate-400">
+                  A IA analisará gramática, coesão, coerência e proposta de solução.
+                </p>
+
+                <button
+                  onClick={handleEvaluate}
+                  disabled={wordCount < selectedPrompt.minWords || isEvaluating}
+                  className={`px-6 py-2.5 rounded-xl text-sm font-semibold text-white flex items-center gap-2 transition-all cursor-pointer ${
+                    wordCount >= selectedPrompt.minWords && !isEvaluating
+                      ? 'bg-purple-600 hover:bg-purple-700 shadow-md shadow-purple-500/20'
+                      : 'bg-slate-300 dark:bg-slate-800 text-slate-500 cursor-not-allowed'
+                  }`}
+                >
+                  {isEvaluating ? (
+                    <>
+                      <Bot className="w-4 h-4 animate-spin" />
+                      <span>Analisando com IA...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4" />
+                      <span>Avaliar com IA</span>
+                    </>
+                  )}
+                </button>
               </div>
             </div>
-
-            {/* Textarea */}
-            <textarea
-              rows={12}
-              value={essayText}
-              onChange={(e) => setEssayText(e.target.value)}
-              placeholder="Digite aqui o seu texto dissertativo completo..."
-              className="w-full p-4 text-sm bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded-2xl focus:ring-2 focus:ring-purple-500 text-slate-800 dark:text-slate-100 placeholder-slate-400 leading-relaxed outline-hidden resize-y"
-            />
-
-            {/* Action Row */}
-            <div className="flex items-center justify-between pt-2">
-              <p className="text-xs text-slate-400">
-                A IA analisará gramática, coesão, coerência e proposta de solução.
-              </p>
-
-              <button
-                onClick={handleEvaluate}
-                disabled={wordCount < selectedPrompt.minWords || isEvaluating}
-                className={`px-6 py-2.5 rounded-xl text-sm font-semibold text-white flex items-center gap-2 transition-all cursor-pointer ${
-                  wordCount >= selectedPrompt.minWords && !isEvaluating
-                    ? 'bg-purple-600 hover:bg-purple-700 shadow-md shadow-purple-500/20'
-                    : 'bg-slate-300 dark:bg-slate-800 text-slate-500 cursor-not-allowed'
-                }`}
-              >
-                {isEvaluating ? (
-                  <>
-                    <Bot className="w-4 h-4 animate-spin" />
-                    <span>Analisando com IA...</span>
-                  </>
-                ) : (
-                  <>
-                    <Send className="w-4 h-4" />
-                    <span>Avaliar com IA</span>
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
+          )}
 
           {/* AI Evaluation Results Card */}
           {evaluation && (

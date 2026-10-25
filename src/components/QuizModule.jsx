@@ -13,14 +13,15 @@ import {
   Calculator,
   Sparkles,
   ChevronRight,
-  Lightbulb
+  Lightbulb,
+  Trash2,
+  UserCheck
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { MOCK_QUIZZES } from '../data/mockData';
 import { useAuth } from '../context/AuthContext';
 
 export default function QuizModule() {
-  const { recordQuizResult } = useAuth();
+  const { recordQuizResult, allQuizzes, deleteCustomQuiz } = useAuth();
 
   const [selectedCategory, setSelectedCategory] = useState('Todos');
   const [activeQuiz, setActiveQuiz] = useState(null);
@@ -64,11 +65,11 @@ export default function QuizModule() {
     setSelectedAnswers({});
     setShowExplanation(false);
     setQuizCompleted(false);
-    setTimeLeft(quiz.timeLimit);
+    setTimeLeft(quiz.timeLimit || 300);
   };
 
   const handleSelectOption = (questionId, optionIdx) => {
-    if (showExplanation) return; // Prevent changing after revealing
+    if (showExplanation) return;
     setSelectedAnswers(prev => ({
       ...prev,
       [questionId]: optionIdx
@@ -117,8 +118,8 @@ export default function QuizModule() {
   const categories = ['Todos', 'Português', 'História', 'Biologia', 'Matemática'];
 
   const filteredQuizzes = selectedCategory === 'Todos'
-    ? MOCK_QUIZZES
-    : MOCK_QUIZZES.filter(q => q.subject === selectedCategory);
+    ? allQuizzes
+    : allQuizzes.filter(q => q.subject === selectedCategory);
 
   // 1. QUIZ ACTIVE VIEW
   if (activeQuiz && !quizCompleted) {
@@ -222,7 +223,7 @@ export default function QuizModule() {
                 <span>Explicação Pedagógica:</span>
               </div>
               <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
-                {currentQuestion.explanation}
+                {currentQuestion.explanation || 'Opção selecionada processada com sucesso.'}
               </p>
             </div>
           )}
@@ -372,20 +373,31 @@ export default function QuizModule() {
         {filteredQuizzes.map((quiz) => (
           <div
             key={quiz.id}
-            className="p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-xs hover:shadow-md transition-all flex flex-col justify-between group"
+            className={`p-6 bg-white dark:bg-slate-900 border rounded-3xl shadow-xs hover:shadow-md transition-all flex flex-col justify-between group ${
+              quiz.isCustom ? 'border-indigo-300 dark:border-indigo-800 ring-1 ring-indigo-500/20' : 'border-slate-200 dark:border-slate-800'
+            }`}
           >
             <div>
               <div className="flex items-center justify-between mb-3">
                 <div className="p-3 rounded-2xl bg-indigo-50 dark:bg-indigo-950/50">
                   {getSubjectIcon(quiz.icon)}
                 </div>
-                <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${
-                  quiz.difficulty === 'Fácil' ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400' :
-                  quiz.difficulty === 'Médio' ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400' :
-                  'bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-400'
-                }`}>
-                  {quiz.difficulty}
-                </span>
+
+                <div className="flex items-center gap-2">
+                  {quiz.isCustom && (
+                    <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 flex items-center gap-1">
+                      <UserCheck className="w-3 h-3" />
+                      <span>Criado por Você</span>
+                    </span>
+                  )}
+                  <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${
+                    quiz.difficulty === 'Fácil' ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400' :
+                    quiz.difficulty === 'Médio' ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400' :
+                    'bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-400'
+                  }`}>
+                    {quiz.difficulty}
+                  </span>
+                </div>
               </div>
 
               <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
@@ -400,9 +412,21 @@ export default function QuizModule() {
             </div>
 
             <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
-              <div className="flex items-center gap-1.5 text-xs text-slate-500 font-semibold">
-                <Timer className="w-4 h-4 text-slate-400" />
-                <span>~{Math.round(quiz.timeLimit / 60)} min</span>
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 text-xs text-slate-500 font-semibold">
+                  <Timer className="w-4 h-4 text-slate-400" />
+                  <span>~{Math.round((quiz.timeLimit || 300) / 60)} min</span>
+                </div>
+
+                {quiz.isCustom && (
+                  <button
+                    onClick={() => deleteCustomQuiz(quiz.id)}
+                    className="p-1 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors cursor-pointer ml-2"
+                    title="Excluir este Quiz"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
               </div>
 
               <button

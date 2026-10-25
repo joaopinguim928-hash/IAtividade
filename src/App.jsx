@@ -4,6 +4,7 @@ import Navbar from './components/Navbar';
 import Sidebar from './components/Sidebar';
 import AuthModal from './components/AuthModal';
 import Dashboard from './components/Dashboard';
+import ActivityCreator from './components/ActivityCreator';
 import QuizModule from './components/QuizModule';
 import AIEssayModule from './components/AIEssayModule';
 import VerbTableModule from './components/VerbTableModule';
@@ -41,6 +42,7 @@ export default function App() {
           {/* Active Tab View Content */}
           <main className="flex-1 min-w-0">
             {activeTab === 'dashboard' && <Dashboard setActiveTab={setActiveTab} />}
+            {activeTab === 'creator' && <ActivityCreator setActiveTab={setActiveTab} />}
             {activeTab === 'quizzes' && <QuizModule />}
             {activeTab === 'essays' && <AIEssayModule />}
             {activeTab === 'verbs' && <VerbTableModule />}
@@ -51,7 +53,7 @@ export default function App() {
 
         {/* Footer */}
         <footer className="border-t border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 py-6 text-center text-xs text-slate-500 dark:text-slate-400">
-          <p>© {new Date().getFullYear()} IAtividade — Plataforma Inteligente de Aprendizagem e Quizzes com IA</p>
+          <p>© {new Date().getFullYear()} IAtividade — Criador e Executor de Atividades Pedagógicas com IA</p>
         </footer>
 
         {/* Login / Cadastrar Modal */}

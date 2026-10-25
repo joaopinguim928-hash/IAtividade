@@ -1,27 +1,31 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Network,
   Plus,
   Trash2,
   Info,
   Sparkles,
-  Maximize2,
-  RotateCcw,
-  BookOpen,
-  ChevronRight,
-  Edit3,
+  UserCheck,
   X
 } from 'lucide-react';
-import { MOCK_MIND_MAPS } from '../data/mockData';
+import { useAuth } from '../context/AuthContext';
 
 export default function MindMapModule() {
-  const [mapsList, setMapsList] = useState(MOCK_MIND_MAPS);
-  const [selectedMap, setSelectedMap] = useState(MOCK_MIND_MAPS[0]);
-  const [selectedNode, setSelectedNode] = useState(MOCK_MIND_MAPS[0].nodes[0]);
+  const { allMindMaps, deleteCustomMindMap } = useAuth();
+
+  const [selectedMap, setSelectedMap] = useState(allMindMaps[0]);
+  const [selectedNode, setSelectedNode] = useState(allMindMaps[0]?.nodes[0]);
   const [isAddNodeOpen, setIsAddNodeOpen] = useState(false);
   const [newNodeTitle, setNewNodeTitle] = useState('');
   const [newNodeDesc, setNewNodeDesc] = useState('');
   const [newNodeColor, setNewNodeColor] = useState('bg-indigo-100 text-indigo-900 border border-indigo-300');
+
+  useEffect(() => {
+    if (allMindMaps.length > 0 && (!selectedMap || !allMindMaps.find(m => m.id === selectedMap.id))) {
+      setSelectedMap(allMindMaps[0]);
+      setSelectedNode(allMindMaps[0]?.nodes[0]);
+    }
+  }, [allMindMaps, selectedMap]);
 
   const handleSelectNode = (node) => {
     setSelectedNode(node);
@@ -29,7 +33,7 @@ export default function MindMapModule() {
 
   const handleAddNode = (e) => {
     e.preventDefault();
-    if (!newNodeTitle || !selectedNode) return;
+    if (!newNodeTitle || !selectedNode || !selectedMap) return;
 
     const newNode = {
       id: 'node-' + Date.now(),
@@ -47,7 +51,6 @@ export default function MindMapModule() {
     };
 
     setSelectedMap(updatedMap);
-    setMapsList(prev => prev.map(m => m.id === updatedMap.id ? updatedMap : m));
     setSelectedNode(newNode);
     setNewNodeTitle('');
     setNewNodeDesc('');
@@ -55,7 +58,7 @@ export default function MindMapModule() {
   };
 
   const handleDeleteNode = (nodeId) => {
-    if (selectedNode?.type === 'root') return; // Do not delete root node
+    if (selectedNode?.type === 'root' || !selectedMap) return;
 
     const updatedNodes = selectedMap.nodes.filter(n => n.id !== nodeId && n.parentId !== nodeId);
     const updatedMap = {
@@ -64,9 +67,10 @@ export default function MindMapModule() {
     };
 
     setSelectedMap(updatedMap);
-    setMapsList(prev => prev.map(m => m.id === updatedMap.id ? updatedMap : m));
     setSelectedNode(updatedNodes[0]);
   };
+
+  if (!selectedMap) return null;
 
   return (
     <div className="space-y-6 pb-12">
@@ -79,27 +83,39 @@ export default function MindMapModule() {
             <span>Mapas Mentais Interativos</span>
           </h1>
           <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Navegue por mapas conceituais hierárquicos e adicione novos ramificações de estudos.
+            Navegue por mapas conceituais hierárquicos e adicione novas ramificações de estudos.
           </p>
         </div>
 
         {/* Map Selector */}
-        <div className="flex items-center gap-2">
-          {mapsList.map((m) => (
-            <button
-              key={m.id}
-              onClick={() => {
-                setSelectedMap(m);
-                setSelectedNode(m.nodes[0]);
-              }}
-              className={`px-3.5 py-2 rounded-2xl text-xs font-bold transition-all cursor-pointer ${
-                selectedMap.id === m.id
-                  ? 'bg-cyan-600 text-white shadow-md shadow-cyan-500/20'
-                  : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-cyan-400'
-              }`}
-            >
-              {m.subject}: {m.title}
-            </button>
+        <div className="flex items-center gap-2 overflow-x-auto pb-1">
+          {allMindMaps.map((m) => (
+            <div key={m.id} className="flex items-center gap-1">
+              <button
+                onClick={() => {
+                  setSelectedMap(m);
+                  setSelectedNode(m.nodes[0]);
+                }}
+                className={`px-3.5 py-2 rounded-2xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+                  selectedMap?.id === m.id
+                    ? 'bg-cyan-600 text-white shadow-md shadow-cyan-500/20'
+                    : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-cyan-400'
+                }`}
+              >
+                {m.isCustom && <UserCheck className="w-3.5 h-3.5 text-indigo-300" />}
+                <span>{m.subject}: {m.title}</span>
+              </button>
+
+              {m.isCustom && (
+                <button
+                  onClick={() => deleteCustomMindMap(m.id)}
+                  className="p-1.5 text-rose-500 hover:bg-rose-100 dark:hover:bg-rose-950/40 rounded-xl cursor-pointer"
+                  title="Excluir Mapa Mental"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
           ))}
         </div>
       </div>
